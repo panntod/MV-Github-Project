@@ -1,0 +1,55 @@
+services:
+  db:
+    restart: always # ⬅️ Restart service jika terjadi error
+    image: mysql:8.0 # ⬅️ Image MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: adminJualanKacang
+      MYSQL_PASSWORD: adminJualanKacang
+      MYSQL_DATABASE: crud_db
+      MYSQL_USER: admin
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - '3306:3306' # ⬅️ Port MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql # ⬅️ Volume untuk menyimpan data MySQL
+    networks:
+      - mv-github-project # ⬅️ Network agar bisa berkomunikasi
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost'] # ⬅️ Cek kesehatan service
+      interval: 10s # ⬅️ Interval cek kesehatan
+      retries: 5 # ⬅️ Jumlah percobaan cek kesehatan
+
+  backend:
+    image: panntod/mv-docker-backend:latest # ⬅️ Image backend
+    ports:
+      - '5000:5000' # ⬅️ Port backend
+    networks:
+      - mv-github-project # ⬅️ Network agar backend bisa terhubung ke database
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: admin
+      DB_PASS: adminJualanKacang
+      DB_NAME: crud_db
+    depends_on:
+      db:
+        condition: service_healthy # ⬅️ Tunggu service db selesai dijalankan
+
+  frontend:
+    restart: on-failure # ⬅️ Restart service jika terjadi error
+    image: panntod/mv-docker-frontend:latest # ⬅️ Image frontend
+    ports:
+      - '80:80' # ⬅️ Port frontend
+    networks:
+      - mv-github-project # ⬅️ Network agar frontend bisa berkomunikasi dengan backend
+    depends_on:
+      - backend # ⬅️ Tunggu service backend selesai dijalankan
+
+# 🔗 NETWORK (agar semua container bisa berkomunikasi)
+networks:
+  mv-github-project:
+    driver: bridge
+
+# 💾 VOLUME (agar data database tidak hilang)
+volumes:
+  mysql_data:
