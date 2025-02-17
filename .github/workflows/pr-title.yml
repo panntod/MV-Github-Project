@@ -1,0 +1,32 @@
+name: Set PR Title Based on Branch Name
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  set-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Branch Name
+        id: branch
+        run: echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+
+      - name: Determine Prefix
+        id: prefix
+        run: |
+          case "${{ env.BRANCH_NAME }}" in
+            feat/*) echo "PREFIX=FEAT" >> $GITHUB_ENV ;;
+            fix/*) echo "PREFIX=FIX" >> $GITHUB_ENV ;;
+            bugfix/*) echo "PREFIX=BUGFIX" >> $GITHUB_ENV ;;
+            hotfix/*) echo "PREFIX=HOTFIX" >> $GITHUB_ENV ;;
+            release/*) echo "PREFIX=RELEASE" >> $GITHUB_ENV ;;
+            *) echo "PREFIX=OTHER" >> $GITHUB_ENV ;;
+          esac
+
+      - name: Set PR Title
+        run: |
+          TITLE="[${{ env.PREFIX }}] ${{ github.event.pull_request.title }}"
+          gh pr edit ${{ github.event.pull_request.number }} --title "$TITLE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
